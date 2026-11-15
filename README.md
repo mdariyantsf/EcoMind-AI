@@ -127,6 +127,8 @@ Lower error indicates more accurate predictions.
 
 The project reports the actual results produced by the application. It does not assume that a more complex model must outperform the baseline.
 
+The recorded results are saved in `ecomind_ai_results.md`, `ecomind_ai_model_metrics.csv` and `ecomind_ai_test_predictions.csv`, and are summarized in `SUBMISSION_WRITEUP.md`.
+
 ## 6. Seasonal Intelligence
 
 Dhaka's climate has distinct seasonal conditions.
@@ -259,7 +261,10 @@ https://streamlit.io/
 
 **AI Assistance**
 
-OpenAI ChatGPT was used as a coding and development assistant. The project methodology, model behavior, data processing, and results must be reviewed and understood by the project creator.
+- OpenAI ChatGPT (https://chatgpt.com/) was used as a coding and development assistant.
+- Claude by Anthropic (https://claude.ai/) was used to review the project against the hackathon rules and to help fix the code and write the submission write-up.
+
+The project creator reviewed and understands the methodology, model behavior, data processing and results.
 
 ---
 
