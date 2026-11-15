@@ -37,9 +37,33 @@ We started from the suggested project "Next-day solar energy forecast" and added
 
 Test-set results were produced by the application on the held-out test year. Baseline: persistence (tomorrow = today). Metrics: MAE and RMSE in kWh/m²/day.
 
-<!-- PASTE THE REAL RESULTS FROM THE APP HERE (see instructions in chat): model table, baseline vs best model, seasonal MAE, low-solar alert precision/recall/F1 and the five largest errors. -->
+Test year: 2025 (365 days). Training: 3,652 days (2015 to 2024).
 
-**Where it fails:** see the five largest Random Forest errors above. Possible reasons are rapid weather changes, unusual cloud conditions and the limited input features. These are hypotheses, not confirmed causes.
+| Model | MAE | RMSE |
+|---|---|---|
+| Persistence baseline | 0.7525 | 1.0317 |
+| Linear Regression | 0.6635 | 0.8904 |
+| Random Forest | 0.6591 | 0.8931 |
+
+Our baseline scored an MAE of 0.7525 kWh/m²/day. Random Forest scored 0.6591 (about 12.4% lower) and Linear Regression scored 0.6635 (about 11.8% lower) on the held-out 2025 data. The two machine learning models are very close to each other (Random Forest is slightly better on MAE, Linear Regression is slightly better on RMSE), so we do not claim that one is clearly better than the other. We tested on one year only.
+
+**Seasonal results (MAE):** forecasts are harder in the monsoon.
+
+| Season | Persistence | Linear Regression | Random Forest |
+|---|---|---|---|
+| Other months (243 days) | 0.6558 | 0.5797 | 0.5670 |
+| Monsoon, June to September (122 days) | 0.9451 | 0.8304 | 0.8425 |
+
+**Low-solar alert** (threshold 3.605 kWh/m²/day, the 25th percentile of training targets; 83 low-solar days in the test year):
+
+| Alert source | Precision | Recall | F1 | Correct alerts | False alerts | Missed days |
+|---|---|---|---|---|---|---|
+| Random Forest | 0.661 | 0.470 | 0.549 | 39 | 20 | 44 |
+| Persistence | 0.554 | 0.554 | 0.554 | 46 | 37 | 37 |
+
+The Random Forest alert gives fewer false alarms but misses more low-solar days. Overall the F1 scores are almost the same, so the alert is a useful extra signal but not a reliable warning on its own.
+
+**Where it fails:** the five largest Random Forest errors were 2025-05-29 (actual 0.817, predicted 4.948), 2025-05-27 (actual 7.243, predicted 4.058), 2025-03-20 (actual 2.853, predicted 5.827), 2025-07-17 (actual 1.715, predicted 4.673) and 2025-09-14 (actual 1.243, predicted 3.894). In every case the persistence baseline was also wrong by a similar amount. We think this happens because the model only sees today's weather, so it cannot anticipate a sudden cloud event or storm that appears the next day. This is a hypothesis, not a confirmed cause.
 
 *This project is a research prototype. NASA POWER data are gridded data products, not measurements from a household panel, and the forecasts are estimates that may be wrong.*
 
