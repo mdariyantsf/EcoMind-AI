@@ -1,108 +1,60 @@
-
 # EcoMind AI
-## Dhaka Solar Resource Forecast & Household Decision Support
 
-**Track:** AI + Climate  
-**Project Location:** Dhaka, Bangladesh  
-**Team:** Ariyan Tausif (Solo Participant)
+**Track:** Climate
+**Team:** Ariyan Tausif (solo participant)
 
-### 1. Problem
+# The problem
 
-Households and small solar-energy users need to understand how much solar energy may be available on the following day. Cloud cover, humidity, and temperature can affect solar radiation. Without a useful forecast, users may find it difficult to plan energy use and battery charging.
+Households in Dhaka, Bangladesh that use solar panels with a battery have to decide how much energy to use when the next day's sunshine is uncertain. Cloud cover, humidity and the monsoon change how much solar radiation reaches the ground from one day to the next. A household battery manager has no simple way to see a data-based estimate of tomorrow's solar resource before planning battery use.
 
-EcoMind AI explores whether machine learning can improve next-day solar-resource forecasts for Dhaka compared with a simple persistence baseline.
+# What we built
 
-### 2. What We Built
+EcoMind AI is a Streamlit application for Dhaka.
 
-EcoMind AI is a data-driven solar-resource forecasting and decision-support application. It uses historical NASA POWER daily data for Dhaka to predict the next day's daily all-sky surface shortwave solar radiation.
+- **Input:** today's solar radiation, temperature, cloud amount and relative humidity (NASA POWER daily data, or values typed in by the user).
+- **Output:** a forecast of tomorrow's solar radiation (kWh/m²/day) and a low-solar alert if the forecast is below a threshold.
+- **User:** a household solar-battery manager in Dhaka, who uses the alert as an extra signal when deciding whether to review the battery-use plan for the next day.
 
-The application includes:
-- Historical solar-resource visualization.
-- A persistence baseline.
-- Linear Regression and Random Forest models.
-- Chronological training and testing.
-- Seasonal performance analysis.
-- Low-solar-resource alerts.
-- Example forecast failures and model evaluation.
-- A manual forecast interface for entering weather observations.
+The app does not predict the electricity a specific panel produces and does not control batteries.
 
-### 3. Data and Method
+# What we added
 
-**Primary data source:** NASA POWER Daily API  
-https://power.larc.nasa.gov/
+We started from the suggested project "Next-day solar energy forecast" and added:
 
-**Location:** Dhaka, Bangladesh  
-**Coordinates:** 23.8103° N, 90.4125° E
+1. **Our own user and place:** a Dhaka household battery manager, with a decision the forecast supports.
+2. **Our own questions:** does the forecast work differently in the monsoon (June to September) than in other months, and can a low-solar alert (25th percentile of training targets) catch low-sun days better than a simple persistence alert?
+3. **Failure analysis:** the five largest forecast errors in the test year.
 
-The application requests daily solar radiation and weather-related variables, including:
-- `ALLSKY_SFC_SW_DWN`
-- `T2M`
-- `CLOUD_AMT`
-- `RH2M`
+# How it works
 
-The target is next-day daily all-sky surface shortwave solar radiation, measured in kWh/m²/day.
+**Data:** NASA POWER daily API for Dhaka (23.8103 N, 90.4125 E), 2015-01-01 to 2025-12-31. Variables: ALLSKY_SFC_SW_DWN, T2M, CLOUD_AMT, RH2M. Missing values (-999) are set to missing, not zero. Every calendar day is kept, so "tomorrow" is always the next calendar day.
 
-The models use today's available observations to estimate the next day's solar radiation. Data is divided chronologically: earlier observations are used for training and the latest complete target year is reserved for testing. The data is not randomly shuffled.
+**Split:** chronological. All target years before the last year are used for training. The most recent target year is the test set. Days are never shuffled.
 
-### 4. Models and Baseline
+**Models:** persistence baseline (tomorrow = today), Linear Regression, and Random Forest (250 trees, max depth 12). The low-solar threshold is calculated from training targets only.
 
-EcoMind AI compares three approaches:
+# Results
 
-1. **Persistence baseline:** predicts that the next day's solar radiation will be the same as today's.
-2. **Linear Regression:** learns relationships between weather-related input variables and next-day solar radiation.
-3. **Random Forest:** captures potentially non-linear relationships in the data.
+Test-set results were produced by the application on the held-out test year. Baseline: persistence (tomorrow = today). Metrics: MAE and RMSE in kWh/m²/day.
 
-Mean Absolute Error (MAE) and Root Mean Squared Error (RMSE) are used to evaluate forecast performance on the held-out test period.
+<!-- PASTE THE REAL RESULTS FROM THE APP HERE (see instructions in chat): model table, baseline vs best model, seasonal MAE, low-solar alert precision/recall/F1 and the five largest errors. -->
 
-### 5. Results
+**Where it fails:** see the five largest Random Forest errors above. Possible reasons are rapid weather changes, unusual cloud conditions and the limited input features. These are hypotheses, not confirmed causes.
 
-**Complete this section after running the application and recording the actual test results. Do not estimate or invent metrics.**
+*This project is a research prototype. NASA POWER data are gridded data products, not measurements from a household panel, and the forecasts are estimates that may be wrong.*
 
-| Model | Test MAE (kWh/m²/day) | Test RMSE |
-|---|---:|---:|
-| Persistence | [Insert actual result] | [Insert actual result] |
-| Linear Regression | [Insert actual result] | [Insert actual result] |
-| Random Forest | [Insert actual result] | [Insert actual result] |
+# What we'd do next
 
-**Best-performing model:** [Insert after evaluation]
+1. Test more input features and longer forecast horizons (one to seven days).
+2. Convert forecast radiation to expected electricity for a real panel system and try the alert with a real household's energy-use plan.
 
-**Seasonal findings:** [Insert actual monsoon and non-monsoon results]
+# Sources
 
-### 6. Real-World Decision Support
-
-The intended user is a household solar-battery manager in Dhaka.
-
-A next-day solar-resource forecast can help the user anticipate relatively low or high solar availability and plan energy use accordingly. The low-solar alert is based on a threshold calculated from the training-period data.
-
-The application forecasts solar radiation, not actual electricity generation or guaranteed battery performance.
-
-### 7. Limitations and Failure Analysis
-
-Forecasts may be less reliable during unusual weather conditions or when the input data does not represent rapidly changing local conditions. NASA POWER data is not a direct measurement from an individual household's solar panels.
-
-The application includes examples of forecast errors so that weak predictions can be examined rather than hidden. Model performance must be interpreted using the held-out test results.
-
-### 8. Next Steps
-
-Future improvements could include:
-- Testing additional forecasting models.
-- Evaluating more recent observations.
-- Adding more local weather information.
-- Improving the usefulness of household decision recommendations.
-
-### 9. Sources
-
-- NASA POWER Data Access Viewer: https://power.larc.nasa.gov/
-- NASA POWER Documentation: https://power.larc.nasa.gov/docs/
-- Scikit-learn Documentation: https://scikit-learn.org/stable/
-
-### 10. Code and Application
-
-**GitHub Repository:** https://github.com/mdariyantsf/EcoMind-AI
-
-**Application:** Run the project using the instructions in `README.md`.
-
----
-
-**Created by Ariyan Tausif**  
-Bangladesh | Veritas AI International High School Hackathon 2026
+- NASA POWER (data): https://power.larc.nasa.gov/ and https://power.larc.nasa.gov/docs/
+- scikit-learn (models): https://scikit-learn.org/stable/
+- pandas: https://pandas.pydata.org/ and NumPy: https://numpy.org/
+- Plotly (charts): https://plotly.com/python/
+- Streamlit (application): https://streamlit.io/
+- Requests: https://requests.readthedocs.io/
+- AI tool: OpenAI ChatGPT was used as a coding and development assistant (https://chatgpt.com/). Claude (Anthropic, https://claude.ai/) was used to review the project against the hackathon rules and to help fix the code and write-up. The team member reviewed and understands the project.
+- Code: https://github.com/mdariyantsf/EcoMind-AI
