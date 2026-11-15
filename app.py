@@ -5,7 +5,6 @@ import numpy as np
 import requests
 import plotly.express as px
 
-from datetime import date
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler
@@ -47,6 +46,12 @@ PARAMETER_MAP = {
     "CLOUD_AMT": "cloud_amount",
     "RH2M": "humidity"
 }
+
+MODEL_NAMES = [
+    "Persistence baseline",
+    "Linear Regression",
+    "Random Forest"
+]
 
 
 # ============================================================
@@ -167,6 +172,7 @@ def download_nasa_power_data():
     data.index.name = "date"
     data = data.reset_index()
 
+    # NASA POWER uses -999 for missing values.
     data = data.replace([-999, -999.0], np.nan)
 
     for column in PARAMETER_MAP.values():
@@ -175,11 +181,27 @@ def download_nasa_power_data():
             errors="coerce"
         )
 
-    data = data.dropna(subset=[TARGET])
+    data = data.dropna(subset=["date"])
     data = data.sort_values("date")
     data = data.drop_duplicates(subset=["date"])
 
-    return data.reset_index(drop=True)
+    # Keep one row for every calendar day. Days with missing
+    # observations stay as NaN instead of being deleted, so that
+    # "tomorrow" is always the next calendar day.
+    full_dates = pd.date_range(
+        data["date"].min(),
+        data["date"].max(),
+        freq="D"
+    )
+
+    data = (
+        data.set_index("date")
+        .reindex(full_dates)
+        .rename_axis("date")
+        .reset_index()
+    )
+
+    return data
 
 
 # ============================================================
@@ -195,14 +217,18 @@ def prepare_dataset(raw_data):
     df["solar_today"] = df["solar_radiation"]
 
     # Tomorrow's observed solar radiation is the target.
+    # raw_data has one row per calendar day, so shift(-1)
+    # is always exactly the next day.
     df["target"] = df["solar_radiation"].shift(-1)
 
     # The input weather values belong to the current day.
     # The target belongs to the following day.
     df["target_date"] = df["date"].shift(-1)
 
+    # Today's solar value is needed for the persistence baseline,
+    # so rows without it (or without a target) are removed.
     df = df.dropna(
-        subset=["target", "target_date"]
+        subset=["solar_today", "target", "target_date"]
     ).copy()
 
     df["target_year"] = df["target_date"].dt.year
@@ -369,11 +395,7 @@ def seasonal_analysis(test_results):
         if subset.empty:
             continue
 
-        for model_name in [
-            "Persistence baseline",
-            "Linear Regression",
-            "Random Forest"
-        ]:
+        for model_name in MODEL_NAMES:
 
             mae = mean_absolute_error(
                 subset["Actual"],
@@ -394,8 +416,13 @@ def seasonal_analysis(test_results):
 # Low-solar alert evaluation
 # ============================================================
 
-def low_solar_analysis(train, test_results):
+def low_solar_analysis(
+    train,
+    test_results,
+    model_column="Random Forest"
+):
 
+    # The threshold comes from training data only.
     threshold = float(
         train["target"].quantile(0.25)
     )
@@ -405,7 +432,7 @@ def low_solar_analysis(train, test_results):
     )
 
     predicted_low = (
-        test_results["Random Forest"] < threshold
+        test_results[model_column] < threshold
     )
 
     true_positive = int(
@@ -443,6 +470,7 @@ def low_solar_analysis(train, test_results):
     )
 
     results = {
+        "model": model_column,
         "threshold": threshold,
         "precision": precision,
         "recall": recall,
@@ -454,6 +482,147 @@ def low_solar_analysis(train, test_results):
     }
 
     return results
+
+
+def alert_comparison_table(alert_list):
+
+    rows = []
+
+    for item in alert_list:
+        rows.append({
+            "Alert source": item["model"],
+            "Precision": item["precision"],
+            "Recall": item["recall"],
+            "F1": item["f1"],
+            "Correct alerts": item["true_positive"],
+            "False alerts": item["false_positive"],
+            "Missed low-solar days": item["false_negative"]
+        })
+
+    return pd.DataFrame(rows)
+
+
+# ============================================================
+# Failure investigation table
+# ============================================================
+
+def largest_errors(test_results, count=5):
+
+    failure_data = test_results.copy()
+
+    failure_data["Random Forest absolute error"] = (
+        failure_data["Actual"]
+        - failure_data["Random Forest"]
+    ).abs()
+
+    failure_data = failure_data.sort_values(
+        "Random Forest absolute error",
+        ascending=False
+    )
+
+    return failure_data.head(count)
+
+
+# ============================================================
+# Results report (real numbers, for the write-up)
+# ============================================================
+
+def dataframe_to_markdown(df, decimals=4):
+
+    columns = list(df.columns)
+
+    lines = [
+        "| " + " | ".join(str(c) for c in columns) + " |",
+        "|" + "|".join(["---"] * len(columns)) + "|"
+    ]
+
+    for _, row in df.iterrows():
+
+        cells = []
+
+        for column in columns:
+
+            value = row[column]
+
+            if isinstance(value, (float, np.floating)):
+                cells.append(f"{value:.{decimals}f}")
+            elif isinstance(value, pd.Timestamp):
+                cells.append(str(value.date()))
+            else:
+                cells.append(str(value))
+
+        lines.append("| " + " | ".join(cells) + " |")
+
+    return "\n".join(lines)
+
+
+def build_results_report(
+    raw_data,
+    evaluation,
+    seasonal_results,
+    alert_table,
+    worst_cases,
+    threshold
+):
+
+    metrics = evaluation["metrics"]
+
+    best_row = metrics.loc[metrics["MAE"].idxmin()]
+
+    baseline_mae = float(
+        metrics.loc[
+            metrics["Model"] == "Persistence baseline",
+            "MAE"
+        ].iloc[0]
+    )
+
+    valid_dates = raw_data.dropna(subset=["solar_radiation"])
+
+    worst_view = worst_cases[
+        [
+            "target_date",
+            "Actual",
+            "Random Forest",
+            "Persistence baseline",
+            "Random Forest absolute error"
+        ]
+    ]
+
+    lines = [
+        "# EcoMind AI - Results (generated by the application)",
+        "",
+        f"Location: {LOCATION_NAME}",
+        f"Data: NASA POWER daily, "
+        f"{valid_dates['date'].min().date()} to "
+        f"{valid_dates['date'].max().date()}",
+        f"Training days: {len(evaluation['train']):,}",
+        f"Test year: {evaluation['test_year']} "
+        f"({len(evaluation['test_results']):,} test days)",
+        "",
+        "## Model comparison (held-out test year)",
+        "",
+        dataframe_to_markdown(metrics),
+        "",
+        f"Persistence baseline MAE: {baseline_mae:.4f} kWh/m2/day.",
+        f"Lowest MAE: {best_row['Model']} "
+        f"({best_row['MAE']:.4f} kWh/m2/day).",
+        "",
+        "## Error by season (MAE)",
+        "",
+        dataframe_to_markdown(seasonal_results),
+        "",
+        f"## Low-solar alerts (threshold {threshold:.3f} kWh/m2/day, "
+        "25th percentile of training targets)",
+        "",
+        dataframe_to_markdown(alert_table),
+        "",
+        "## Five largest Random Forest errors",
+        "",
+        dataframe_to_markdown(worst_view, decimals=3),
+        ""
+    ]
+
+    return "\n".join(lines)
 
 
 # ============================================================
@@ -563,7 +732,30 @@ try:
 
     alert_results = low_solar_analysis(
         train,
-        test_results
+        test_results,
+        "Random Forest"
+    )
+
+    persistence_alert_results = low_solar_analysis(
+        train,
+        test_results,
+        "Persistence baseline"
+    )
+
+    alert_table = alert_comparison_table([
+        alert_results,
+        persistence_alert_results
+    ])
+
+    worst_cases = largest_errors(test_results, 5)
+
+    results_report = build_results_report(
+        raw_data,
+        evaluation,
+        seasonal_results,
+        alert_table,
+        worst_cases,
+        alert_results["threshold"]
     )
 
 except Exception as error:
@@ -594,12 +786,14 @@ except Exception as error:
 
 st.subheader("📊 Solar Intelligence Dashboard")
 
+valid_raw = raw_data.dropna(subset=["solar_radiation"])
+
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.metric(
         "Historical records",
-        f"{len(raw_data):,}"
+        f"{len(valid_raw):,}"
     )
 
 with col2:
@@ -622,8 +816,8 @@ with col4:
 
 
 st.caption(
-    f"Dataset dates: {raw_data['date'].min().date()} "
-    f"to {raw_data['date'].max().date()}. "
+    f"Dataset dates: {valid_raw['date'].min().date()} "
+    f"to {valid_raw['date'].max().date()}. "
     "The latest target year is held out for testing."
 )
 
@@ -811,7 +1005,9 @@ st.subheader("⚠️ Low Solar Alert Evaluation")
 st.write(
     "The alert threshold is the 25th percentile of the "
     "training-period next-day solar radiation. It is calculated "
-    "without using test-period target values."
+    "without using test-period target values. The Random Forest "
+    "alert is compared with a simple persistence alert "
+    "(alert if today's value is below the threshold)."
 )
 
 st.metric(
@@ -823,23 +1019,34 @@ alert_col1, alert_col2, alert_col3 = st.columns(3)
 
 with alert_col1:
     st.metric(
-        "Precision",
+        "Precision (Random Forest)",
         f"{alert_results['precision']:.3f}"
     )
 
 with alert_col2:
     st.metric(
-        "Recall",
+        "Recall (Random Forest)",
         f"{alert_results['recall']:.3f}"
     )
 
 with alert_col3:
     st.metric(
-        "F1 score",
+        "F1 score (Random Forest)",
         f"{alert_results['f1']:.3f}"
     )
 
-st.write("**Alert classification counts**")
+st.write("**Alert comparison**")
+
+st.dataframe(
+    alert_table.style.format({
+        "Precision": "{:.3f}",
+        "Recall": "{:.3f}",
+        "F1": "{:.3f}"
+    }),
+    use_container_width=True
+)
+
+st.write("**Random Forest alert classification counts**")
 
 st.write({
     "Correct low-solar alerts": alert_results["true_positive"],
@@ -855,20 +1062,6 @@ st.write({
 
 st.markdown("---")
 st.subheader("🔍 Failure Investigation")
-
-failure_data = test_results.copy()
-
-failure_data["Random Forest absolute error"] = (
-    failure_data["Actual"]
-    - failure_data["Random Forest"]
-).abs()
-
-failure_data = failure_data.sort_values(
-    "Random Forest absolute error",
-    ascending=False
-)
-
-worst_cases = failure_data.head(5)
 
 st.write(
     "The following are the five largest Random Forest "
@@ -1010,6 +1203,18 @@ if st.button(
 st.markdown("---")
 st.subheader("📥 Research Data & Results")
 
+st.write(
+    "Download the results report below and paste its numbers "
+    "into the Results section of the write-up."
+)
+
+st.download_button(
+    label="Download results report (Markdown)",
+    data=results_report.encode("utf-8"),
+    file_name="ecomind_ai_results.md",
+    mime="text/markdown"
+)
+
 csv_data = test_results.to_csv(
     index=False
 ).encode("utf-8")
@@ -1031,6 +1236,9 @@ st.download_button(
     file_name="ecomind_ai_model_metrics.csv",
     mime="text/csv"
 )
+
+with st.expander("Preview results report"):
+    st.markdown(results_report)
 
 
 # ============================================================
@@ -1063,11 +1271,13 @@ all-sky surface shortwave solar radiation.
 
 **Evaluation:** Earlier target dates are used for training.
 The latest available target year is held out for testing.
-The days are never randomly shuffled.
+The days are never randomly shuffled. Days with missing
+observations are kept as gaps, so "tomorrow" is always the
+next calendar day.
 
 **Project-specific addition:** Seasonal error analysis,
-low-solar alert evaluation and a household decision-support
-interface for Dhaka.
+low-solar alert evaluation (compared with a persistence alert)
+and a household decision-support interface for Dhaka.
 """)
 
 st.subheader("⚖️ Important limitations")
