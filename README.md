@@ -1,16 +1,16 @@
+☀️ EcoMind AI
 
-# ☀️ EcoMind AI
-## AI-Powered Solar Intelligence & Climate Decision Support
+AI-Powered Solar Intelligence & Climate Decision Support
 
-**Track:** AI + Climate  
-**Location:** Dhaka, Bangladesh  
-**Project Creator:** Ariyan Tausif
+Track: AI + Climate
+Location: Dhaka, Bangladesh
+Project Creator: Ariyan Tausif
 
 ---
 
-## 1. The Problem
+1. The Problem
 
-Households that depend on solar energy need to make practical decisions about energy use when solar resources may vary from day to day.
+Households that depend on solar energy need to make practical decisions about energy use when solar resources vary from day to day.
 
 In Dhaka, Bangladesh, changing weather conditions, cloud cover, humidity, and seasonal patterns can influence the amount of solar radiation reaching the Earth's surface.
 
@@ -18,17 +18,17 @@ However, household solar-battery managers may not have an accessible way to exam
 
 EcoMind AI explores how machine learning can support this decision through next-day solar radiation forecasting.
 
-## 2. What We Built
+2. What We Built
 
-EcoMind AI is an AI-powered solar resource forecasting and decision-support application focused on Dhaka.
+EcoMind AI is a solar resource forecasting and decision-support application focused on Dhaka, Bangladesh.
 
-It uses historical daily weather and solar radiation data from NASA POWER to train machine learning models.
+It uses historical daily weather and solar radiation data from NASA POWER to train and evaluate machine learning models.
 
 The application provides:
 
 - Historical solar radiation visualization.
 - Next-day solar radiation forecasting.
-- Comparison between AI models and a persistence baseline.
+- Comparison between machine learning models and a persistence baseline.
 - Seasonal forecast-error analysis.
 - Low-solar resource alerts.
 - Evaluation of alert precision, recall, and F1 score.
@@ -38,46 +38,42 @@ The application provides:
 
 The intended user is a household solar-battery manager who wants an additional information source when planning household battery use.
 
-## 3. What We Added
+3. Research Objectives
 
-Our project is based on the suggested next-day solar forecasting challenge.
-
-We made it specific to Dhaka, Bangladesh, and focused on a household solar-battery planning decision.
-
-Our additional research questions are:
+EcoMind AI investigates three main research questions:
 
 1. Can machine learning improve next-day solar radiation forecasts compared with the persistence baseline in Dhaka?
 2. Does forecasting performance differ between the monsoon season and other months?
 3. Can a low-solar alert help identify days when household energy planning may need extra attention?
 
-We also evaluate low-solar alerts using a threshold calculated from training data.
+The project also evaluates low-solar alerts using a threshold calculated exclusively from training data.
 
-## 4. How It Works
+4. How It Works
 
-### Data Source
+Data Source
 
 NASA POWER Daily API:
 
 https://power.larc.nasa.gov/
 
 Location:
+
 - Latitude: 23.8103
 - Longitude: 90.4125
 - City: Dhaka
 - Country: Bangladesh
 
-The application requests these daily parameters:
+The application requests the following daily parameters:
 
-| Parameter | Meaning |
-|---|---|
-| ALLSKY_SFC_SW_DWN | All-sky surface shortwave downward solar radiation |
-| T2M | Temperature at 2 metres |
-| CLOUD_AMT | Cloud amount |
-| RH2M | Relative humidity at 2 metres |
+Parameter| Meaning
+ALLSKY_SFC_SW_DWN| All-sky surface shortwave downward solar radiation
+T2M| Temperature at 2 metres
+CLOUD_AMT| Cloud amount
+RH2M| Relative humidity
 
 The target variable is daily solar radiation, measured in kWh/m²/day.
 
-### Forecasting Method
+Forecasting Method
 
 The model uses today's available values to estimate tomorrow's solar radiation.
 
@@ -92,25 +88,25 @@ Target:
 
 - Following day's solar radiation
 
-### Models
+Models
 
-EcoMind AI compares three approaches.
+EcoMind AI compares three forecasting approaches.
 
-**1. Persistence Baseline**
+1. Persistence Baseline
 
 The baseline assumes that tomorrow's solar radiation will be the same as today's.
 
-**2. Linear Regression**
+2. Linear Regression
 
 A machine learning reference model that learns a linear relationship between today's input features and tomorrow's solar radiation.
 
-**3. Random Forest**
+3. Random Forest
 
 An ensemble machine learning model that learns more complex relationships between the input features and the forecasting target.
 
 No model is assumed to be better before evaluation.
 
-## 5. Evaluation Strategy
+5. Evaluation Strategy
 
 The project uses chronological evaluation.
 
@@ -127,9 +123,13 @@ Lower error indicates more accurate predictions.
 
 The project reports the actual results produced by the application. It does not assume that a more complex model must outperform the baseline.
 
-The recorded results are saved in `ecomind_ai_results.md`, `ecomind_ai_model_metrics.csv` and `ecomind_ai_test_predictions.csv`, and are summarized in `SUBMISSION_WRITEUP.md`.
+Evaluation results are saved in:
 
-## 6. Seasonal Intelligence
+- "ecomind_ai_results.md"
+- "ecomind_ai_model_metrics.csv"
+- "ecomind_ai_test_predictions.csv"
+
+6. Seasonal Intelligence
 
 Dhaka's climate has distinct seasonal conditions.
 
@@ -140,7 +140,7 @@ EcoMind AI compares forecasting errors across:
 
 This analysis helps investigate whether next-day solar radiation is more difficult to forecast during particular parts of the year.
 
-## 7. Low Solar Resource Alerts
+7. Low Solar Resource Alerts
 
 EcoMind AI calculates a low-solar threshold using the 25th percentile of the training-period target values.
 
@@ -157,13 +157,13 @@ The application evaluates these alerts using:
 
 The threshold is calculated from training data rather than the held-out test targets.
 
-## 8. Failure Investigation
+8. Failure Investigation
 
-A forecasting system should explain where it performs poorly.
+A forecasting system should also identify where it performs poorly.
 
 EcoMind AI identifies the five largest Random Forest prediction errors in the test period.
 
-These cases allow us to investigate possible reasons for forecasting failures, including:
+These cases allow investigation of possible reasons for forecasting failures, including:
 
 - Rapid weather changes.
 - Unusual cloud conditions.
@@ -172,15 +172,15 @@ These cases allow us to investigate possible reasons for forecasting failures, i
 
 These explanations are treated as hypotheses unless independently verified.
 
-## 9. Decision Support
+9. Decision Support
 
 The intended decision is whether a household solar-battery manager in Dhaka should review the household's battery-use plan because of an expected low-solar day.
 
-EcoMind AI provides an additional forecast signal for that decision.
+EcoMind AI provides an additional forecast signal to support that decision.
 
 It does not automatically control batteries or guarantee electricity availability.
 
-## 10. Important Scientific Limitations
+10. Important Scientific Limitations
 
 Solar radiation and solar electricity generation are not the same thing.
 
@@ -199,7 +199,7 @@ NASA POWER data are gridded environmental data products. They are not direct mea
 
 Forecasts are estimates and may be inaccurate, especially during unusual weather conditions.
 
-## 11. Technology Stack
+11. Technology Stack
 
 - Python
 - Streamlit
@@ -210,25 +210,21 @@ Forecasts are estimates and may be inaccurate, especially during unusual weather
 - Requests
 - NASA POWER Daily API
 
-## 12. How to Run
+12. How to Run
 
 Install the required libraries:
 
-```bash
 pip install -r requirements.txt
-```
 
 Start the application:
 
-```bash
 streamlit run app.py
-```
 
 The application retrieves historical data from NASA POWER when it runs, so an internet connection is required.
 
-## 13. Sources and Credits
+13. Sources and Credits
 
-**Dataset**
+Dataset
 
 NASA POWER:
 https://power.larc.nasa.gov/
@@ -236,12 +232,12 @@ https://power.larc.nasa.gov/
 NASA POWER API Documentation:
 https://power.larc.nasa.gov/docs/
 
-**Machine Learning**
+Machine Learning
 
 Scikit-learn:
 https://scikit-learn.org/
 
-**Data Processing**
+Data Processing
 
 Pandas:
 https://pandas.pydata.org/
@@ -249,28 +245,19 @@ https://pandas.pydata.org/
 NumPy:
 https://numpy.org/
 
-**Visualization**
+Visualization
 
 Plotly:
 https://plotly.com/python/
 
-**Application Framework**
+Application Framework
 
 Streamlit:
 https://streamlit.io/
 
-**AI Assistance**
+14. Future Improvements
 
-- OpenAI ChatGPT (https://chatgpt.com/) was used as a coding and development assistant.
-- Claude by Anthropic (https://claude.ai/) was used to review the project against the hackathon rules and to help fix the code and write the submission write-up.
-
-The project creator reviewed and understands the methodology, model behavior, data processing and results.
-
----
-
-## 14. Future Improvements
-
-With more time, EcoMind AI could be improved by:
+With further development, EcoMind AI could be improved by:
 
 1. Testing additional forecasting features.
 2. Comparing multiple forecast horizons.
@@ -280,7 +267,7 @@ With more time, EcoMind AI could be improved by:
 
 ---
 
-**EcoMind AI — Turning Solar Data into Better Decisions.**
+EcoMind AI — Turning Solar Data into Better Decisions.
 
-Created by Ariyan Tausif  
+Created by Ariyan Tausif
 Dhaka, Bangladesh
